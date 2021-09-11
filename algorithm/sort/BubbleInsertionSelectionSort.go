@@ -1,21 +1,19 @@
 package main
 
-import "fmt"
-
 /**
 
  */
 
-func main() {
-	var needSortSlice []int = []int{1, 9, 10, 30, 2, 5, 45, 8, 63, 234, 12}
-	//sortedData := BubbleSort(needSortSlice)
-	//sortedData := InsertionSort(needSortSlice)
-	//sortedData := SelectionSort(needSortSlice)
-	sortedData := ShellSort(needSortSlice)
-
-	fmt.Println(sortedData)
-
-}
+//func main() {
+//	var needSortSlice []int = []int{1, 9, 10, 30, 2, 5, 45, 8, 63, 234, 12}
+//	//sortedData := BubbleSort(needSortSlice)
+//	//sortedData := InsertionSort(needSortSlice)
+//	//sortedData := SelectionSort(needSortSlice)
+//	sortedData := ShellSort(needSortSlice)
+//
+//	fmt.Println(sortedData)
+//
+//}
 
 //---------------------------------冒泡---------------------------
 // 冒泡排序: 从小到大排序
