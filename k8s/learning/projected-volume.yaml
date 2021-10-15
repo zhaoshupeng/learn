@@ -1,0 +1,165 @@
+# 包含 Secret、downwardAPI 和 configMap 的 Pod 示例
+apiVersion: v1
+kind: Pod
+metadata:
+  name: volume-test
+  labels:
+    zone: us-est-coast
+    cluster: test-cluster1
+    rack: rack-22
+spec:
+  containers:
+    containers:
+      - name: all-in-one
+        image: busybox
+        args:
+          - sleep
+          - "86400"
+        volumeMounts:
+          - name: all-in-one
+            mountPath: "/projected-volume"
+            readOnly: true
+  volumes:
+    - name: all-in-one
+      projected:
+        sources: # 每个被投射的卷来源都在规约中的 sources 内列出。
+          - secret:
+              name: mysecret
+              items:
+                - key: username
+                  path: my-group/my-username
+          - secret:
+              name: user
+          - secret:
+              name: pass
+          - secret:
+              name: mysecret2
+              items:
+                - key: password
+                  path: my-group/my-password
+                  mode: 511 #带有非默认访问权限设置的 secret 的 Pod
+          - downwardAPI:
+              items:
+                - path: "labels"  # 挂载成为容器里的 /projected-volume/labels 文件
+                  fieldRef:
+                    fieldPath: metadata.labels  # 明了要暴露 Pod 的 metadata.labels 信息给容器。
+                - path: "cpu_limit"
+                  resourceFieldRef: # 使用 resourceFieldRef 可以声明使用: 容器的 CPU limit、request；memory limit、limit
+                    containerName: container-test
+                    resource: limits.cpu
+          - configMap:
+              name: myconfigmap
+              items:
+                - key: config
+                  path: my-group/my-config
+
+####demo
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-projected-volume
+spec:
+  containers:
+    - name: test-secret-volume
+      image: busybox
+      args:
+        - sleep
+        - "86400"
+      volumeMounts:
+        - name: mysql-cred
+          mountPath: "/projected-volume"
+          readOnly: true
+  volumes:
+    - name: mysql-cred # 通过挂载方式进入到容器里的 Secret，一旦其对应的 Etcd 里的数据被更新， 这些 Volume 里的文件内容，同样也会被更新。这是 kubelet 组件在定时维护这些 Volume。
+      projected: #需要注意的是，这个更新可能会有一定的延时。所以在编写应用程序时，在发起数据库连接的代码处写好重试和超时的逻辑，绝对是个好习惯。
+        sources:
+          - secret:
+              name: user
+          - secret:
+              name: pass
+### 除了使用 kubectl create secret 指令外，我也可以直接通过编写 YAML 文件的方式来创建 这个 Secret 对象
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+type: Opaque
+data: # Secret 对象要求这些数据必须是经过 Base64 转码的
+  username: YWRtaW4=
+  password: MWYyZDFlMmU2N2Rm
+stringData: # stringData 字段。 这字段可以将一个非 base64 编码的字符串直接放入 Secret 中，
+  email: administrator
+
+#   在 Kubernetes 中，有几种特殊的 Volume，它们存在的意义不是为了存放容器里的数据，也不是 用来进行容器和宿主机之间的数据交换。
+#这些特殊 Volume 的作用，是为容器提供预先定义好的数据。所以，从容器的角度来看，这些 Volume 里的信息就是仿佛是被 Kubernetes“投 射”(Project)进入容器当中的。这正是 Projected Volume 的含义。
+
+# 到目前为止，Kubernetes 支持的 Projected Volume 一共有四种:
+#  1. Secret;
+#  2. ConfigMap;
+#  3. Downward API;
+#  4. ServiceAccountToken。  # 一种特殊的 Secret 。
+# 其实，Secret、ConfigMap，以及 Downward API 这三种 Projected Volume 定义的信息，大多 还可以通过环境变量的方式出现在容器里。
+# 但是，通过环境变量获取这些信息的方式，不具备自动 更新的能力。所以，一般情况下，我都建议你使用 Volume 文件的方式获取这些信息。
+
+# 1、Secret
+  #Secret。它的作用，是帮你把 Pod 想要访问的加密数据， 存放到 Etcd 中。然后，你就可以通过在 Pod 的容器里挂载 Volume 的方式，访问到这些 Secret 里保存的信息了。
+#  (1) 创建 Secret 方式一
+#      $ cat ./username.txt
+#      admin
+#      $ cat ./password.txt
+#      c1oudc0w!
+#      $ kubectl create secret generic user --from-file=./username.txt
+#      $ kubectl create secret generic pass --from-file=./password.txt
+#
+#      $ kubectl get secrets  # 查看这些 Secret 对象
+#  (2) 创建 Secret 方式二：通过yaml文件，参考上面
+
+# 2、ConfigMap
+  #ConfigMap，它与 Secret 的区别在于，ConfigMap 保存的是不需要加密的、 应用所需的配置信息。而 ConfigMap 的用法几乎与 Secret 完全相同。
+
+#  (1) 创建 ConfigMap
+#    # .properties 文件的内容
+#    $ cat example/ui.properties color.good=purple color.bad=yellow allow.textmode=true how.nice.to.look=fairlyNice
+#    # 从.properties 文件创建 ConfigMap
+#    $ kubectl create configmap ui-config --from-file=example/ui.properties
+#    # 查看这个 ConfigMap 里保存的信息 (data)
+#    $ kubectl get configmaps ui-config -o yaml
+
+# 3、Downward API
+    # Downward API，它的作用是:让 Pod 里的容器能够直接获取到这个 Pod API 对象本身 的信息。
+    # 需要注意的是，Downward API 能够获取到的信息，一定是 Pod 里的容器进程启动之前就 能够确定下来的信息。而如果你想要获取 Pod 容器运行后才会出现的信息，比如，容器进程的 PID，那就肯定不能使用 Downward API 了，而应该考虑在 Pod 里定义一个 sidecar 容器。
+#    目前，Downward API 支持的字段已经非常丰富了，比如:
+#      1. 使用 fieldRef 可以声明使用:
+#        spec.nodeName - 宿主机名字
+#        status.hostIP - 宿主机 IP
+#        metadata.name - Pod 的名字
+#        metadata.namespace - Pod 的 Namespace
+#        status.podIP - Pod 的 IP
+#        spec.serviceAccountName - Pod 的 Service Account 的名字 metadata.uid - Pod 的 UID
+#        metadata.labels['<KEY>'] - 指定 <KEY> 的 Label 值 metadata.annotations['<KEY>'] - 指定 <KEY> 的 Annotation 值 metadata.labels - Pod 的所有 Label
+#        metadata.annotations - Pod 的所有 Annotation
+#      2. 使用 resourceFieldRef 可以声明使用: 容器的 CPU limit
+
+# 4、Service Account 、 ServiceAccountToken
+      #Service Account 对象的作用，就是 Kubernetes 系统内置的一种“服务账户”，它是 Kubernetes 进行权限分配的对象。比如，Service Account A，可以只被允许对 Kubernetes API 进行 GET 操 作。
+      #Service Account 的授权信息和文件，实际上保存在它所绑定的一个特殊的 Secret 对象里 的。这个特殊的 Secret 对象，就叫作
+    #ServiceAccountToken。任何运行在 Kubernetes 集群上的 应用，都必须使用这个 ServiceAccountToken 里保存的授权信息，
+    #也就是 Token，才可以合法地 访问 API Server。
+
+      # Kubernetes 已经为你提供了一个的默认“服务账户”(default Service Account)。并且，任何一个运行在 Kubernetes 里的 Pod，
+    #都可以直接使用这个默认的 Service Account，而无需显示地声明挂载它。Kubernetes 其实在每个 Pod 创建的时候，自动在它
+    #的 spec.volumes 部分添加上了默认 ServiceAccountToken 的定义，然后自动给每个容器加上了对应的 volumeMounts 字段。
+      # 是靠 Projected Volume 机制实现的。
+
+
+
+
+
+
+
+
+
+
+
+

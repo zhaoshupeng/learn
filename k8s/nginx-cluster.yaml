@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-cluster-deployment #资源的名字，在同一个namespace中必须唯一
+  labels: #设定资源的标签
+    k8s-app: nginx
+    version: v1
+  annotations:            #自定义注解列表
+    name: nginx-test-cluster        #自定义注解名字
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      name: nginx-cluster
+  template:
+    metadata:
+      labels:
+        name: nginx-cluster
+    spec:
+      containers:
+        - name: nginx-clu
+          image: nginx:1.19.3 #容器使用的镜像地址, apt-get update ; 然后 apt-get install -y vim 安装vim
+          imagePullPolicy: IfNotPresent
+          command: [ 'echo' ] #启动容器的运行命令，将覆盖容器中的Entrypoint,对应Dockefile中的ENTRYPOINT
+          args: [ "$(str)" ] #启动容器的命令参数，对应Dockerfile中CMD参数
+          workingDir: /root/
+          env: #指定容器中的环境变量
+            - name: str #变量的名字
+              value: "/etc/run.sh" #变量的值
+          resources: #资源管理
+            requests: #容器运行时，最低资源需求，也就是说最少需要多少资源容器才能正常运行
+              cpu: 0.1 #CPU资源（核数），两种方式，浮点数或者是整数+m，0.1=100m，最少值为0.001核（1m）
+              memory: 32Mi #内存使用量
+            limits: #资源限制
+              cpu: 0.5
+              memory: 1000Mi
+          ports:
+            - containerPort: 80 #容器开放对外的端口
+              name: httpd  #名称
+              protocol: TCP
+          livenessProbe: #pod内容器健康检查的设置
+            httpGet: #通过httpget检查健康，返回200-399之间，则认为容器正常
+              path: / #URI地址
+              port: 80
+              #host: 127.0.0.1 #主机地址
+              scheme: HTTP
+            initialDelaySeconds: 20 #表明第一次检测在容器启动后多长时间后开始
+            timeoutSeconds: 5 #检测的超时时间
+            periodSeconds: 15  #检查间隔时间
+          volumeMounts: #挂载持久存储卷
+            - name: volume #挂载设备的名字，与volumes[*].name 需要对应
+              mountPath: /data #挂载到容器的某个路径下
+              readOnly: True
+      volumes: #定义一组挂载设备
+        - name: volume #定义一个挂载设备的名字
+          #meptyDir: {}
+          hostPath:
+            path: /home/zhaoshupeng/logs #挂载设备类型为hostPath，路径为宿主机下的/home/zhaoshupeng/logs,这里设备类型支持很多种
+          #nfs
+
+
+# 创建Service提供对外访问的接口
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service-nodeport
+spec:
+  ports:
+    - port: 8000
+      targetPort: 80
+      protocol: TCP
+  #type: NodePort
+  selector:
+    name: nginx-cluster
+
+
+
+
+
+

@@ -1,0 +1,40 @@
+# 安装命令参考地址  https://commandnotfound.cn/linux/1/190/top-%E5%91%BD%E4%BB%A4
+
+1、安装vim
+    （1） apt-get update ; 然后 apt-get install -y vim 安装vim
+
+2、Linux 安装 nslookup 和dig
+        nslookup是常用来查询本机域名解析情况的工具； dig(domain information groper)是一个在类Unix命令行模式下查询DNS包括NS记录，
+    A记录，MX记录等相关信息的工具。
+    （1）
+       Fedora / Centos 系统:
+            yum -y install bind-utils
+       Debian / Ubuntu 系统：
+            apt-get -y install dnsutils
+3、安装 ps
+    #Debian
+    apt-get install procps
+
+    #Ubuntu
+    apt-get install procps
+
+    #Alpine
+    apk add procps
+
+    #Arch Linux
+    pacman -S procps-ng
+
+    #Kali Linux
+    apt-get install procps
+
+    #CentOS
+    yum install procps
+
+    #Fedora
+    dnf install bro-devel
+
+    #Raspbian
+    apt-get install procps
+
+    #Docker
+    docker run cmd.cat/top top

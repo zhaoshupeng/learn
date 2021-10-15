@@ -1,0 +1,135 @@
+apiVersion: v1 #必选，指定api版本，此值必须在 kubectl api-versions 中;这个版本号需要根据安装的Kubernetes版本和资源类型进行变化，记住不是写死的。
+kind: Pod #必选，指定创建资源的角色/类型,根据实际情况，此处资源类型可以是Deployment、Job、Ingress、Service等。
+metadata: #必选，资源的元数据/属性；包含Pod的一些meta信息，比如名称、namespace、标签等信息。
+  name: test-pod #必选，Pod名称，资源的名字，在同一个namespace中必须唯一
+  #namespace: string    #Pod所属的命名空间
+  labels: #设定资源的标签
+    k8s-app: apache
+    version: v1
+    kubernetes.io/cluster-service: "true"
+  annotations:            #自定义注解列表
+    - name: String        #自定义注解名字
+spec: #必选，specification of the resource content 指定该资源的内容，比如Pod;凡是调度、网络、存储，以及安全相关的属性，基本上是 Pod 级别的。
+  restartPolicy: Always #Pod 恢复机制，默认值是 Always；默认k8s的策略，在此容器退出后，会立即创建一个相同的容器。要强调的是，Pod 的恢复过程，永远都是发生在当前节点上。
+                #Always:在任何情况下，只要容器不在运行状态，就自动重启容器;
+                #OnFailure: 只在容器 异常时才自动重启容器; 对于包含多个容器的 Pod，只有它里面所有的容器都进入异常状态后，Pod 才会进入 Failed 状 态。在此之前，Pod 都是 Running 状态。
+                #Never: 从来不重启容器。
+  nodeSelector:     #节点选择，先给主机打标签kubectl label nodes kube-node1 zone=node1
+    zone: node1
+  hostAliases: # 使用 HostAliases 向 Pod /etc/hosts 文件添加条目;由 Kubelet 管理，并且 可以在 Pod 创建/重启过程中被重写。
+    - ip: "127.0.0.1"
+      hostnames:
+        - "foo.local"
+        - "bar.local"
+    - ip: "10.1.2.3"
+      hostnames:
+        - "foo.remote"
+        - "bar.remote"
+  imagePullSecrets: #imagePullSecret资源将Secret提供的密码传递给kubelet从而在拉取镜像前完成必要的认证过程，简单说就是你的镜像仓库是私有的，每次拉取是需要认证的。
+    - name: regcred
+  shareProcessNamespace: true # 意味着这个 Pod 里的容器要共享 PID Namespace(容器间)。
+  initContainers: # 在 Pod 中，所有 Init Container 定义的容器，都会比 spec.containers 定义的用户容器先启动。并 且，Init Container 容器会按顺序逐一启动，而直到它们都启动并且退出了，用户容器才会启动。
+    - image: geektime/sample:v2
+      name: war
+      command: [ "cp", "/sample.war", "/app" ]
+      volumeMounts:
+        - mountPath: /app
+          name: volume
+  containers: #必选，Pod中容器列表
+    - name: test-pod  #必选，容器的名字
+      image: 10.192.21.18:5000/test/chat:latest #必选，容器使用的镜像地址
+      imagePullPolicy: Never  #三个选择Always、Never、IfNotPresent，每次启动时检查和更新（从registery）images的策略，
+                              # Always，每次都检查
+                              # Never，每次都不检查（不管本地是否有）,#直接不再去拉取镜像了，使用本地的；如果本地不存在就报异常
+                              # IfNotPresent，默认值,如果本地有就不检查，如果没有就拉取
+      command: ['sh'] #启动容器的运行命令，将覆盖容器中的Entrypoint,对应Dockefile中的ENTRYPOINT，如不指定，使用打包时使用的启动命令
+      args: ["$(str)"] #启动容器的命令参数，对应Dockerfile中CMD参数
+      #注意command命令的效果，若容器内部没有常驻进程，导致容器启动成功后即退出，从而进行了持续的重启。会发现提示 Back-off restarting failed container
+      #command: [ "/bin/bash", "-ce", "tail -f /dev/null" ]
+      #command: [ "/bin/bash", "-c", "--" ]
+      #args: [ "while true; do sleep 30; done;" ]
+      workingDir: /root/  #容器的工作目录
+      env: #指定容器中的环境变量，容器运行前需设置的环境变量列表
+        - name: str #变量的名字
+          value: "/etc/run.sh" #变量的值
+      resources: #资源管理
+        requests: #容器运行时，最低资源需求，也就是说最少需要多少资源容器才能正常运行
+          cpu: 0.1 #CPU资源（核数），两种方式，浮点数或者是整数+m，0.1=100m，最少值为0.001核（1m）
+          memory: 32Mi #内存使用量
+        limits: #资源限制
+          cpu: 0.5
+          memory: 1000Mi
+      ports:
+        - containerPort: 80 #容器开放对外的端口
+          #hostPort: int    #容器所在主机需要监听的端口号，默认与Container相同
+          name: httpd  #端口号名称
+          protocol: TCP #端口协议，支持TCP和UDP，默认TCP
+      livenessProbe: #pod内容器健康检查的设置，在容器启动后执行；当探测无响应几次后将自动重启该容器，检查方法有exec、httpGet和tcpSocket，对一个容器只需设置其中一种方法即可
+        httpGet: #通过httpget检查健康，返回200-399之间，则认为容器正常
+          path: / #URI地址
+          port: 80
+          #host: 127.0.0.1 #主机地址
+          scheme: HTTP
+#          HttpHeaders:
+#            - name: string
+#              value: string
+        initialDelaySeconds: 180 #表明第一次检测在容器启动后多长时间后开始，单位为秒
+        timeoutSeconds: 5 #对容器健康检查探测等待响应的超时时间，单位秒，默认1秒
+        periodSeconds: 15  #检查间隔时间，对容器监控检查的定期探测时间设置，单位秒，默认10秒一次
+        #也可以用这种方法
+        #exec: 执行命令的方法进行监测，如果其退出码不为0，则认为容器正常
+        #  command:
+        #    - cat
+        #    - /tmp/health
+        #也可以用这种方法
+        #tcpSocket: //通过tcpSocket检查健康
+        #  port: number
+
+
+      lifecycle: #生命周期管理，在容器状态发生变化时触发一系列“钩子”。
+        postStart: #它指的是，在容器启动后，立刻执行一个指定的操作。需要明确的是， postStart 定义的操作，虽然是在 Docker 容器 ENTRYPOINT 执行之后，但它并不严格保证顺序。 也就是说，在 postStart 启动时，ENTRYPOINT 有可能还没有结束。
+          exec:
+            command:
+              - 'sh'
+              - 'yum upgrade -y'
+        preStop: #容器关闭之前运行的任务,而需要明 确的是，preStop 操作的执行，是同步的。所以，它会阻塞当前的容器杀死流程，直到这个 Hook 定义操作完成之后，才允许容器被杀死，这跟 postStart 不一样。
+          exec:
+            command: ['service httpd stop']
+      volumeMounts:  #挂载持久存储卷
+        - name: volume #挂载设备的名字，与volumes[*].name 需要对应；引用pod定义的共享存储卷的名称，需用volumes[]部分定义的的卷名
+          mountPath: /data #挂载到容器的某个路径下，存储卷在容器内mount的绝对路径，应少于512字符
+          readOnly: True #是否为只读模式
+
+    - name: shell  # 一个是开启了 tty 和 stdin 的 shell 容器。
+      image: busybox
+      securityContext: #安全上下文（Security Context）定义 Pod 或 Container 的特权与访问控制设置。
+        capabilities:
+          add:
+            - SYS_PTRACE
+      stdin: true
+      tty: true
+  #hostNetwork: false      #是否使用主机网络模式，默认为false，如果设置为true，表示使用宿主机网络; 如果在POD中使用hostNetwork:true配置网络，pod中运行的应用程序可以直接看到宿主主机的网络接口，宿主主机所在的局域网上所有网络接口都可以访问到该应用程序。
+  #dnsPolicy: ClusterFirstWithHostNet #该设置是使POD使用的k8s的dns; 如果不加上dnsPolicy: ClusterFirstWithHostNet ，pod默认使用所在宿主主机使用的DNS，这样也会导致容器内不能通过service name 访问k8s集群中其他POD：z
+
+  #hostNetwork: true # 在这个 Pod 中，我定义了共享宿主机的 Network、IPC 和 PID Namespace。这就意味着，这个 Pod 里的所有容器，会直接使用宿主机的网络、直接与宿主机进行 IPC 通信、看到宿主机里正在运 行的所有进程。
+  #hostIPC: true # IPC 进程间通信
+  #hostPID: true
+
+  volumes: #定义一组挂载设备
+    - name: volume #定义一个挂载设备的名字
+      #meptyDir: {} #类型为 emptyDir的存储卷，与Pod同生命周期的一个临时目录。为空值
+      hostPath:
+        path: /opt #挂载设备类型为hostPath，路径为宿主机下的/opt,这里设备类型支持很多种
+      #nfs
+      secret: #类型为secret的存储卷，挂载集群与定义的secre对象到容器内部
+        scretname: string
+        items:
+          - key: string
+            path: string
+      configMap: #类型为configMap的存储卷，挂载预定义的configMap对象到容器内部
+        name: string
+        items:
+          - key: string
+
+
+

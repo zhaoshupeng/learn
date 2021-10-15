@@ -1,0 +1,14 @@
+1. nginx
+    docker中nginx的默认路径位置和映射目录启动
+    conf
+        /etc/nginx/nginx.conf
+    html
+        /usr/share/nginx/html
+    log
+        /var/log/nginx
+
+
+
+
+
+

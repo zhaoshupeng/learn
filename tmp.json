@@ -1,0 +1,162 @@
+[
+  {
+    "subtitle": "TAL脑科学研究院倾力研究",
+    "course_id": 1,
+    "course_name":"TAL脑科学实验室",
+    "teacher_icons":"https://cdn.xes1v1.com/files/local/plat/zero/2021-09-26/5e31ac99e2551e5d.png",
+    "main_title": "如何提升孩子学习力",
+    "lecture_list": [
+      {
+        "id": 1,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "帮助孩子树立时间观念",
+        "is_home": 0,
+        "play_url":"https://res.izhikang.com/materialservice/20210607152255497017000000800081.mp4",
+        "cover_pic": "",
+        "content_id": 70,
+        "course_duration": 1850
+      },
+      {
+        "id": 2,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "如何提升孩子的执行力",
+        "is_home": 1,
+        "play_url":"https://res.izhikang.com/materialservice/20210607150906505010000000730084.mp4",
+        "cover_pic": "https://cdn.xes1v1.com/files/local/plat/zero/2021-09-26/85c286ee2a8454e2.png",
+        "content_id": 67,
+        "course_duration": 2255
+      },
+      {
+        "id": 3,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "如何教会孩子学会总结",
+        "is_home": 1,
+        "play_url":"https://res.izhikang.com/materialservice/20210607145706738017000000670082.mp4",
+        "cover_pic": "https://cdn.xes1v1.com/files/local/plat/zero/2021-09-26/b0d86cff0f74f0de.png",
+        "content_id": 65,
+        "course_duration": 1145
+      },
+      {
+        "id": 4,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "如何培养孩子的毅力",
+        "is_home": 1,
+        "play_url":"https://res.izhikang.com/materialservice/20210607150202275010000000690087.mp4",
+        "cover_pic": "https://cdn.xes1v1.com/files/local/plat/zero/2021-09-26/5a3f9dea4502f0c4.png",
+        "content_id": 66,
+        "course_duration": 1959
+      },
+      {
+        "id": 5,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "如何做好检查",
+        "is_home": 0,
+        "play_url":"https://res.izhikang.com/materialservice/20210607144945734010000000800079.mp4",
+        "cover_pic": "",
+        "content_id": 64,
+        "course_duration": 1665
+      },
+      {
+        "id": 6,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "谈谈孩子的注意力问题",
+        "is_home": 0,
+        "play_url":"https://res.izhikang.com/materialservice/20210607151712902010000000710090.mp4",
+        "cover_pic": "",
+        "content_id": 68,
+        "course_duration": 2040
+      },
+      {
+        "id": 7,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "谈谈孩子的自制力问题",
+        "is_home": 0,
+        "play_url":"https://res.izhikang.com/materialservice/20210607152058060017000000800079.mp4",
+        "cover_pic": "",
+        "content_id": 69,
+        "course_duration": 1908
+      },
+      {
+        "id": 8,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "4个方法推动孩子学习",
+        "is_home": 0,
+        "play_url":"https://res.izhikang.com/materialservice/20210607140112287017000000800072.mp4",
+        "cover_pic": "",
+        "content_id": 58,
+        "course_duration": 1798
+      },
+      {
+        "id": 9,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "如何做好预习，提高效率",
+        "is_home": 0,
+        "play_url":"https://res.izhikang.com/materialservice/20210607103741089017000000660061.mp4",
+        "cover_pic": "",
+        "content_id": 38,
+        "course_duration": 1326
+      },
+      {
+        "id": 10,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "如何做好笔记",
+        "is_home": 0,
+        "play_url":"https://res.izhikang.com/materialservice/20210607140555846010000044210052.mp4",
+        "cover_pic": "",
+        "content_id": 59,
+        "course_duration": 2158
+      },
+      {
+        "id": 11,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "考前复习方法",
+        "is_home": 0,
+        "play_url":"https://res.izhikang.com/materialservice/20210607142151549017000000690085.mp4",
+        "cover_pic": "",
+        "content_id": 61,
+        "course_duration": 5878
+      },
+      {
+        "id": 12,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "考前心里必备",
+        "is_home": 0,
+        "play_url":"https://res.izhikang.com/materialservice/20210607142717214010000000690083.mp4",
+        "cover_pic": "",
+        "content_id": 62,
+        "course_duration": 3262
+      },
+      {
+        "id": 13,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "考后如何分析找回丢分",
+        "is_home": 0,
+        "play_url":"https://res.izhikang.com/materialservice/20210607141722338017000000800076.mp4",
+        "cover_pic": "",
+        "content_id": 60,
+        "course_duration": 4389
+      },
+      {
+        "id": 14,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "如何应对孩子偏科",
+        "is_home": 0,
+        "play_url":"https://res.izhikang.com/materialservice/20210607144025491017000000720087.mp4",
+        "cover_pic": "",
+        "content_id": 63,
+        "course_duration": 1627
+      },
+      {
+        "id": 15,
+        "desc": "TAL脑科学实验室倾力研究出的系列家庭教育素质课程，激发孩子的能力，培养孩子的时间观念、执行力，养成良好的习惯",
+        "name": "如何做好新学期准备",
+        "is_home": 0,
+        "play_url":"https://res.izhikang.com/materialservice/20210607134907891010000000710087.mp4",
+        "cover_pic": "",
+        "content_id": 57,
+        "course_duration": 2007
+      }
+    ],
+    "course_cover_pic": "https://cdn.xes1v1.com/files/local/plat/zero/2021-09-26/66ef3f0638abb5de.png"
+  }
+]
