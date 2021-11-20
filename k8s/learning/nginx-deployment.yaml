@@ -7,6 +7,13 @@ spec:
     matchLabels:
       app: nginx
   replicas: 2
+  strategy:
+    type: RollingUpdate  # type==RollingUpdate时，采取 滚动更新的方式更新 Pods。
+    rollingUpdate:
+      maxSurge: 1  #一个可选字段，用来指定可以创建的超出期望Pod个数的Pod数量。百分比值会通过向上取整转换为绝对数。 此字段的默认值为 25%。
+      maxUnavailable: 1 #是一个可选字段，用来指定 更新过程中不可用的 Pod 的个数上限。百分比值会转换成绝对数并去除小数部分,maxSurge 为 0，则此值不能为 0。 默认值为 25%。
+  revisionHistoryLimit: 8 #是一个可选字段，用来设定出于回滚目的所要保留的旧 ReplicaSet 数量。 默认情况下，系统保留 10 个旧 ReplicaSet，但其理想值取决于新 Deployment 的频率和稳定性。
+
   template: # 定义了一个 Pod 模版(spec.template)，这个模版描述了我想要创建的 Pod 的细节。
     metadata: # 每一个 API 对象都有一个叫作 Metadata 的字段，这个字段就是 API 对象 的“标识”，即元数据，它也是我们从 Kubernetes 里找到这个对象的主要依据。这其中最主要使 用到的字段是 Labels。
       labels:

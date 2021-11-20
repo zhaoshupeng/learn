@@ -23,8 +23,29 @@ import "container/list"
 法来快速定位两个顶点之间否是存在边。）
 */
 
+/**
+需要说明一下，深度优先搜索算法和广度优先搜索算法，既可以用在无向图，也可以用在有向图上。
+*/
+
 //adjacency table, 以无向图作为示例
 type Graph struct {
-	adj []*list.List // 邻接表
+	adj []*list.List // 邻接表 // list 包实现了一个双链表（doubly linked list）
 	v   int          // 顶点的个数
+}
+
+// init graphh according to capacity
+func NewGraph(v int) *Graph {
+	graphh := &Graph{}
+	graphh.v = v
+	graphh.adj = make([]*list.List, v)
+	for i := range graphh.adj {
+		graphh.adj[i] = list.New() //  // 创建一个新的链表，头节点是空(哨兵)
+	}
+	return graphh
+}
+
+//insert as add edge，一条边存2次
+func (graph *Graph) addEdge(s int, t int) { // 无向图一条边存两次
+	graph.adj[s].PushBack(t)
+	graph.adj[t].PushBack(s)
 }

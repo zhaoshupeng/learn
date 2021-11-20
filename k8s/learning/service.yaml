@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+spec:
+  ports:
+    - port: 80
+      name: web
+      #protocol: TCP
+  clusterIP: None  # 所谓的 Headless Service，其实仍是一个标准 Service 的 YAML 文件。只不过，它 的 clusterIP 字段的值是:None，即:这个 Service，没有一个 VIP 作为“头”。
+  selector:
+    app: nginx
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# service
+  # Service 是 Kubernetes 项目中用来将 一组 Pod 暴露给外界访问的一种机制。
+  # 那么，这个 Service 又是如何被访问的呢?
+#    第一种方式，是以 Service 的 VIP(Virtual IP，即:虚拟 IP)方式。它会把请求转发到该 Service 所代理 的某一个 Pod 上。
+#    第二种方式，就是以 Service 的 DNS 方式。比如:这时候，只要我访问“my-svc.my-namespace.svc.cluster.local”这条 DNS 记录，就可以访问到名叫 my-svc 的 Service 所代理 的某一个 Pod
+#      Service DNS 的方式下，具体还可以分为两种处理方法:
+#            第一种处理方法，是 Normal Service。这种情况下，你访问“my-svc.my-namespace.svc.cluster.local”解析到的，正是 my-svc
+#        这个 Service 的 VIP
+#            第二种处理方法，正是 Headless Service。这种情况下，你访问“my-svc.my-namespace.svc.cluster.local”解析到的，直接
+#        就是 my-svc 代理的某一个 Pod 的 IP 地址。可以看到，这里的区别在于，Headless Service 不需要分配一个 VIP，
+#    创建了一个 Headless Service 之后，它所代理的所有 Pod 的 IP 地址，都会被绑定一个这样格式的 DNS 记录，如下所示:
+#        <pod-name>.<svc-name>.<namespace>.svc.cluster.local
+#    这个 DNS 记录，正是 Kubernetes 项目为 Pod 分配的唯一的“可解析身份”(Resolvable Identity)。
+
+
+
+
+
+
+

@@ -1,18 +1,36 @@
 package main
 
 import (
-	"crypto/md5"
-	"crypto/sha1"
-	"encoding/hex"
 	"fmt"
 	"hash/crc32"
+	"unsafe"
 )
 
 func main() {
 
-	v1 := 3 / 4
-	v2 := 3 / 4 * 4
-	fmt.Println("----------------------", v1, v2)
+	// 创建一个新的链表，并向链表里面添加几个数字
+	//l := list.New()
+	//fmt.Printf("ddddd%#v\n", l)
+	//fmt.Printf("%p\n", l)
+	//
+	//ll := new(list.List)
+	//fmt.Printf("fffff%#v\n", ll)
+	//fmt.Printf("%p\n", ll)
+	var u User
+	fmt.Println("u1 size is ", unsafe.Sizeof(u))
+
+	re := new(Re)
+	fmt.Printf("fffff%#v\n", re)
+	fmt.Printf("%p\n", re)
+	fmt.Printf("%p\n", &re.CourseId)
+	fmt.Printf("%p\n", &re.Base)
+
+	//e4 := l.PushBack(4)
+	//e1 := l.PushFront(1)
+	//l.InsertBefore(3, e4)
+	//l.InsertAfter(2, e1)
+
+	//fmt.Println("wwww", e4)
 	//md5Str("good")
 	//hashValue("good")
 	//buckets := make([][]int, 3)
@@ -40,30 +58,26 @@ func gcd(a, b int64) int64 {
 	return gcd(b, a%b)
 }
 
-func md5Str(origin string) {
-
-	m := md5.New()
-	m.Write([]byte(origin))
-
-	str := hex.EncodeToString(m.Sum(nil))
-	fmt.Println("md5Str---------", str)
-	//return hex.EncodeToString(m.Sum(nil))
-
-	TestString := "Hi, pandaman!"
-
-	Md5Inst := md5.New()
-	Md5Inst.Write([]byte(TestString))
-	Result := Md5Inst.Sum([]byte(""))
-	fmt.Printf("%x\n\n", Result)
-
-	Sha1Inst := sha1.New()
-	Sha1Inst.Write([]byte(TestString))
-	Result = Sha1Inst.Sum([]byte(""))
-	fmt.Printf("%x\n\n", Result)
-}
-
 func hashValue(origin string) {
 	crcTable := crc32.MakeTable(crc32.IEEE)
 	hashVal := crc32.Checksum([]byte(origin), crcTable)
 	fmt.Println("hashValue-----------", hashVal)
+}
+
+type Re struct {
+	CourseId int `json:"course_id"`
+	Base
+}
+
+type Base struct {
+	Grade   int `json:"grade"`
+	Subject int `json:"subject"`
+}
+
+// 64位平台，对齐参数是8
+type User struct {
+	A int32 // 4
+	//	B []int32 // 24
+	C string // 16
+	D bool   // 1
 }

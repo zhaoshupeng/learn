@@ -53,10 +53,35 @@
 7、PodPreset(Pod 预设置)
     Kubernetes 自动给 Pod 填充某些字段
 
+8、以 Deployment 为例，简单描述一下它对控制器模型的实现:
 
+
+9、有状态 应用”(Stateful Application)
+    尤其是分布式应用，，依赖关系，比如:主从关系、主备关系；数据存储类应用；相互之间有顺序关系。
+    StatefulSet 的设计其实非常容易理解。它把真实世界里的应用状态，抽象为了两种情况:
+    1. 拓扑状态。这种情况意味着，应用的多个实例之间不是完全对等的关系。这些应用实例，必 须按照某些顺序启动，比如应用的主节点 A 要先于
+    从节点 B 启动。并且，新创建出来的 Pod，必须和原来 Pod 的网络标识一样，这样原先的访问者才能使用同样的方法，访问到 这个新 Pod。
+    2. 存储状态。这种情况意味着，应用的多个实例分别绑定了不同的存储数据。Pod A 第一次读取到的数据，和隔了十分钟之后再次读取到的数据，
+    应该是同一 份，哪怕在此期间 Pod A 被重新创建过。
 
 
 readinessProbe 检查结果的成功与否，决定的这个 Pod 是不是能被通 过 Service 的方式访问到，而并不影响 Pod 的生命周期。这部分内容，我会留在讲解 Service 时再 重点介绍。
+
+10、Kubernetes v1.7 之后添加了一个 API 对象，名叫ControllerRevision，专门用来记录某种 Controller 对象的版本。
+    kubectl get controllerrevision -n kube-system -l name=fluentd-elasticsearch
+
+
+11、
+
+
+
+
+
+
+
+
+
+
 
 
 

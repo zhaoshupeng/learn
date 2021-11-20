@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd-elasticsearch
+  namespace: zsp
+  labels:
+    k8s-app: fluentd-logging
+spec:
+  selector:
+    matchLabels:
+      name: fluentd-elasticsearch
+  template:
+    metadata:
+      labels:
+        name: fluentd-elasticsearch
+    spec:
+      affinity: # Pod 里跟调度相关的一个字段,如果找不到合适的节点，在对应的ns下找不到创建的pod
+        nodeAffinity: # 节点亲和性，代替nodeSelector
+          requiredDuringSchedulingIgnoredDuringExecution: #意思是说，这个 nodeAffinity 必须在每次调度的时候予以考虑。同时，这也意味着你可以设置在某些情况下不考虑这个 nodeAffinity；
+            nodeSelectorTerms:
+              - matchExpressions: # 这个 Pod，将来只允许运行在“metadata.name”是“node-geektime”的节点上
+                  - key: metadata.name
+                    operator: In
+                    values:
+                      - node-geektime
+      tolerations: # 另外一个与调度相关的字段，叫作 tolerations；意味着这个 Pod，会“容忍”（Toleration）某些 Node 的“污点”（Taint）
+        # this toleration is to have the daemonset runnable on master nodes
+        # remove it if your masters can't run pods
+        - key: node-role.kubernetes.io/master
+          operator: Exists  #这个 Toleration 的含义是：“容忍”所有被标记为 unschedulable“污点”的 Node；容忍”的效果是允许在master节点上
+          effect: NoSchedule #在正常情况下，被标记了 unschedulable“污点”的 Node，是不会有任何 Pod 被调度上去的（effect: NoSchedule）
+      containers:
+        - name: fluentd-elasticsearch
+          image: quay.io/fluentd_elasticsearch/fluentd:v2.5.2 # 通过 fluentd 将 Docker 容器里的日志转发到 ElasticSearch 中。
+          resources: # 需要注意的是，在 DaemonSet 上，我们一般都应该加上 resources 字段，来限制它的 CPU 和内存使用，防止它占用过多的宿主机资源。
+            limits:
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 200Mi
+          volumeMounts:
+            - name: varlog
+              mountPath: /var/log
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1、顾名思义，DaemonSet 的主要作用，是让你在 Kubernetes 集群里，运行一个 Daemon Pod。 所以，这个 Pod 有如下三个特征：
+  这个 Pod 运行在 Kubernetes 集群里的每一个节点（Node）上；
+  每个节点上只有一个这样的 Pod 实例；
+  当有新的节点加入 Kubernetes 集群后，该 Pod 会自动地在新节点上被创建出来；而当旧节点被删除后，它上面的 Pod 也相应地会被回收掉。
+
+  列举几个例子：各种网络插件的 Agent 组件、各种存储插件的 Agent 组件、各种监控组件和日志组件，也必须运行在每一个节点上。
+  DaemonSet 并不需要修改用户提交的 YAML 文件里的 Pod 模板，而是在向 Kubernetes 发起请求之前，直接修改根据模板生成的 Pod 对象。
+更重要的是，跟其他编排对象不一样，DaemonSet 开始运行的时机，很多时候比整个 Kubernetes 集群出现的时机都要早。
+
+2、DaemonSet 跟 Deployment 其实非常相似，只不过是没有 replicas 字段
+
+3、DaemonSet 的“过人之处”，其实就是依靠 Toleration 实现的。
+
+4、在创建每个 Pod 的时候，DaemonSet 会自动给这个 Pod 加上一个 nodeAffinity，从而保证这个 Pod 只会在指定节点上启动。同时，它还
+  会自动给这个 Pod 加上一个 Toleration，从而忽略节点的 unschedulable“污点”。
+
+  默认情况下，Kubernetes 集群不允许用户在 Master 节点部署 Pod。因为，Master 节点默认携带了一个叫作node-role.kubernetes.io/master的“污点”。
+
+5、DaemonSet 控制器操作的直接就是 Pod，不可能有 ReplicaSet 这样的对象参与其中。那么，它的这些版本又是如何维护的呢？
+  Kubernetes v1.7 之后添加了一个 API 对象，名叫ControllerRevision，专门用来记录某种 Controller 对象的版本。
+  kubectl get controllerrevision -n kube-system -l name=fluentd-elasticsearch
+
+6、相比于 Deployment，DaemonSet 只管理 Pod 对象，然后通过 nodeAffinity 和 Toleration 这两个调度器的小功能，保证了每个节点上有
+  且只有一个 Pod。
+  与此同时，DaemonSet 使用 ControllerRevision，来保存和管理自己对应的“版本”。

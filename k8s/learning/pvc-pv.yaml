@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce # ReadWriteOnce，表示这个 Volume 的挂载方式是可读写，并且只能被挂载在一个节点上而非 被多个节点共享。
+  resources:
+    requests:
+      storage: 1Gi # 表示想要的 Volume 大小至少是 1 GB
+
+
+
+
+
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-volume
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 10Gi
+  rbd:  # rbd 字段，正是我们前面介绍过的 Ceph RBD Volume 的详细 定义。
+    monitors:
+      - '10.16.154.78:6789'
+      - '10.16.154.82:6789'
+      - '10.16.154.83:6789'
+    pool: kube
+    image: foo
+    fsType: ext4
+    readOnly: true
+    user: admin
+    keyring: /etc/ceph/keyring
+    imageformat: "2"
+    imagefeatures: "layering"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Persistent Volume Claim(PVC)和 Persistent Volume(PV)的 API 对象
+# Kubernetes 中 PVC 和 PV 的设计，实际上类似于“接口”和“实现”的思想。开发者 只要知道并会使用“接口”，即:PVC;而运维人员则负责给“接口”绑定具体的实现，即: PV。
+#PVC 其实就是一种特殊的 Volume。只不过一个 PVC 具体是什么类型的 Volume，要在跟某个 PV 绑定之后才知道。
+
+
+
+
+

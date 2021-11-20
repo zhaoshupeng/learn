@@ -1,0 +1,273 @@
+apiVersion: apps/v1
+kind: StatefulSet # 要求不同节点的镜像不一样，那就不能再使用 StatefulSet 了。StatefulSet 管理的“有状态应用”的多个实例，也都是通过同一份 Pod 模板创建出 来的，使用的是同一个 Docker 镜像。
+metadata:
+  name: mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  serviceName: mysql  # 声明要 使用的 Headless Service 的名字是:mysql。
+  replicas: 3 # 表示它定义的 MySQL 集群有三个节点:一个 Master 节 点，两个 Slave 节点。
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      initContainers: #初始化操作显然适合通过 InitContainer 来完成。
+        #第一步:从 ConfigMap 中，获取 MySQL 的 Pod 对应的配置文件。为此，我们需要进行一个初始化操作，根据节点的角色是 Master 还是
+        #Slave 节点，为 Pod 分 配对应的配置文件。此外，MySQL 还要求集群里的每个节点都有一个唯一的 ID 文件，名叫 server-id.cnf。
+        - name: init-mysql #在这个名叫 init-mysql 的 InitContainer 的配置中，它从 Pod 的 hostname 里，读取到了 Pod 的序号，以此作为 MySQL 节点的 server-id。
+          image: mysql:5.7
+          command:
+            - bash
+            - "-c"
+            - |
+              set -ex
+              # 从 Pod 的序号，生成 server-id
+              # Generate mysql server-id from pod ordinal index.
+              [[ `hostname` =~ -([0-9]+)$ ]] || exit 1
+              ordinal=${BASH_REMATCH[1]}
+              echo [mysqld] > /mnt/conf.d/server-id.cnf
+              # 由于 server-id=0 有特殊含义，我们给 ID 加一个 100 来避开它
+              # Add an offset to avoid reserved server-id=0 value.
+              echo server-id=$((100 + $ordinal)) >> /mnt/conf.d/server-id.cnf
+              # Copy appropriate conf.d files from config-map to emptyDir.
+              # 如果 Pod 序号是 0，说明它是 Master 节点，从 ConfigMap 里把 Master 的配置文件拷贝到 /mnt/conf.d/ 目录
+              # 否则，拷贝 Slave 的配置文件
+              if [[ $ordinal -eq 0 ]]; then
+                cp /mnt/config-map/master.cnf /mnt/conf.d/
+              else
+                cp /mnt/config-map/slave.cnf /mnt/conf.d/
+              fi
+          volumeMounts:
+            - name: conf
+              mountPath: /mnt/conf.d
+            - name: config-map  #在声明了挂载 config-map 这个 Volume 之后，ConfigMap 里保存的内容，就会以文件的方式出现在它的 /mnt/config-map 目录当中
+              mountPath: /mnt/config-map
+        - name: clone-mysql # 使用的是 xtrabackup 镜像（它里面安装了 xtrabackup 工具）
+          #第二步：在 Slave Pod 启动前，从 Master 或者其他 Slave Pod 里拷贝数据库数据到自己的目录下
+          image: gcr.io/google-samples/xtrabackup:1.0
+          command:
+            - bash
+            - "-c"
+            - |
+              set -ex
+              # 拷贝操作只需要在第一次启动时进行，所以如果数据已经存在，跳过
+              # Skip the clone if data already exists.
+              [[ -d /var/lib/mysql/mysql ]] && exit 0
+              # Skip the clone on master (ordinal index 0).
+              # Master 节点 (序号为 0) 不需要做这个操作
+              [[ `hostname` =~ -([0-9]+)$ ]] || exit 1
+              ordinal=${BASH_REMATCH[1]}
+              [[ $ordinal -eq 0 ]] && exit 0
+              # Clone data from previous peer.
+              # 使用 ncat 指令，远程地从前一个节点拷贝数据到本地
+              # 接下来，clone-mysql 会使用 Linux 自带的 ncat 指令，向 DNS 记录为“mysql-< 当前序号减一 >.mysql”的 Pod，也就
+              #是当前 Pod 的前一个 Pod，发起数据传输请求，并且直接用 xbstream 指令将收到的备份数据保存在 /var/lib/mysql 目录下。
+              # 3307 是一个特殊端口，运行着一个专门负责备份 MySQL 数据的辅助进程。
+              ncat --recv-only mysql-$(($ordinal-1)).mysql 3307 | xbstream -x -C /var/lib/mysql
+              # Prepare the backup.
+              # 执行 --prepare，这样拷贝来的数据就可以用作恢复了
+              xtrabackup --prepare --target-dir=/var/lib/mysql
+              # clone-mysql 容器还要对 /var/lib/mysql 目录，执行一句 xtrabackup --prepare 操作，目的是让拷贝来的数据进入一致性状态，这样，这些数据才能被用作数据恢复。
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql # /var/lib/mysql 目录，实际上正是一个名为 data 的 PVC。这就可以保证，哪怕宿主机宕机了，我们数据库的数据也不会丢失。
+              subPath: mysql
+            - name: conf
+              mountPath: /etc/mysql/conf.d
+      containers:
+        - name: mysql
+          image: mysql:5.7
+          env:
+            - name: MYSQL_ALLOW_EMPTY_PASSWORD
+              value: "1"
+          ports:
+            - name: mysql
+              containerPort: 3306
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql  # 一个标准的 MySQL 5.7 的官方镜像。它的数据目录是 /var/lib/mysql
+              subPath: mysql
+            - name: conf
+              mountPath: /etc/mysql/conf.d
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          livenessProbe:
+            exec:
+              command: ["mysqladmin", "ping"] #通过 mysqladmin ping 命令来检查它是否健康；
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              # 通过查询 SQL（select 1）来检查 MySQL 服务是否可用
+              # Check we can execute queries over TCP (skip-networking is off).
+              command: ["mysql", "-h", "127.0.0.1", "-e", "SELECT 1"]
+            initialDelaySeconds: 5
+            periodSeconds: 2
+            timeoutSeconds: 1
+        - name: xtrabackup
+          # 在 Slave 节点的 MySQL 容器第一次启动之前，执行初始化 SQL。额外定义一个 sidecar 容器，来完成这个操作。
+          image: gcr.io/google-samples/xtrabackup:1.0
+          ports:
+            - name: xtrabackup
+              containerPort: 3307
+          command:
+#            - bash  # 官网上的配置
+#            - "-c"
+#            - |
+#              set -ex
+#              cd /var/lib/mysql
+#
+#              # # 从备份信息文件里读取 MASTER_LOG_FILEM 和 MASTER_LOG_POS 这两个字段的值，用来拼装集群初始化 SQL
+#              # Determine binlog position of cloned data, if any.
+#              if [[ -f xtrabackup_slave_info && "x$(<xtrabackup_slave_info)" != "x" ]]; then
+#                # XtraBackup already generated a partial "CHANGE MASTER TO" query
+#                # because we're cloning from an existing slave. (Need to remove the tailing semicolon!)
+#                cat xtrabackup_slave_info | sed -E 's/;$//g' > change_master_to.sql.in
+#                # Ignore xtrabackup_binlog_info in this case (it's useless).
+#                rm -f xtrabackup_slave_info xtrabackup_binlog_info
+#              elif [[ -f xtrabackup_binlog_info ]]; then
+#                # We're cloning directly from master. Parse binlog position.
+#                [[ `cat xtrabackup_binlog_info` =~ ^(.*?)[[:space:]]+(.*?)$ ]] || exit 1
+#                rm -f xtrabackup_binlog_info xtrabackup_slave_info
+#                echo "CHANGE MASTER TO MASTER_LOG_FILE='${BASH_REMATCH[1]}',\
+#                      MASTER_LOG_POS=${BASH_REMATCH[2]}" > change_master_to.sql.in
+#              fi
+#
+#              # Check if we need to complete a clone by starting replication.
+#              if [[ -f change_master_to.sql.in ]]; then
+#                echo "Waiting for mysqld to be ready (accepting connections)"
+#                until mysql -h 127.0.0.1 -e "SELECT 1"; do sleep 1; done
+#
+#                echo "Initializing replication from clone position"
+#                mysql -h 127.0.0.1 \
+#                      -e "$(<change_master_to.sql.in), \
+#                              MASTER_HOST='mysql-0.mysql', \
+#                              MASTER_USER='root', \
+#                              MASTER_PASSWORD='', \
+#                              MASTER_CONNECT_RETRY=10; \
+#                            START SLAVE;" || exit 1
+#                # In case of container restart, attempt this at-most-once.
+#                mv change_master_to.sql.in change_master_to.sql.orig
+#              fi
+#
+#              # Start a server to send backups when requested by peers.
+#              exec ncat --listen --keep-open --send-only --max-conns=1 3307 -c \
+#                "xtrabackup --backup --slave-info --stream=xbstream --host=127.0.0.1 --user=root"
+
+#      可以看到，在这个名叫 xtrabackup 的 sidecar 容器的启动命令里，其实实现了两部分工作。
+#
+#      第一部分工作，当然是 MySQL 节点的初始化工作。这个初始化需要使用的 SQL，是 sidecar 容器拼装出来、保存在一个名
+#      为 change_master_to.sql.in 的文件里的，具体过程如下所示：
+#
+#      sidecar 容器首先会判断当前 Pod 的 /var/lib/mysql 目录下，是否有 xtrabackup_slave_info 这个备份信息文件。
+#          如果有，则说明这个目录下的备份数据是由一个 Slave 节点生成的。这种情况下，XtraBackup 工具在备份的时候，就已经在这个文件里
+#          自动生成了 "CHANGE MASTER TO" SQL 语句。所以，我们只需要把这个文件重命名为 change_master_to.sql.in，后面直接使用即可。
+#
+#          如果没有 xtrabackup_slave_info 文件、但是存在 xtrabackup_binlog_info 文件，那就说明备份数据来自于 Master 节点。这
+#          种情况下，sidecar 容器就需要解析这个备份信息文件，读取 MASTER_LOG_FILE 和 MASTER_LOG_POS 这两个字段的值，用它们拼装出
+#          初始化 SQL 语句，然后把这句 SQL 写入到 change_master_to.sql.in 文件中。
+#
+#      接下来，sidecar 容器就可以执行初始化了。从上面的叙述中可以看到，只要这个 change_master_to.sql.in 文件存在，那就说明接下来需
+#      要进行集群初始化操作。
+#
+#      所以，这时候，sidecar 容器只需要读取并执行 change_master_to.sql.in 里面的“CHANGE MASTER TO”指令，再执行一句
+#      START SLAVE 命令，一个 Slave 节点就被成功启动了。
+#
+#      当然，上述这些初始化操作完成后，我们还要删除掉前面用到的这些备份信息文件。否则，下次这个容器重启时，就会发现这些文件存在，所以又会
+#      重新执行一次数据恢复和集群初始化的操作，这是不对的。
+#
+#      同理，change_master_to.sql.in 在使用后也要被重命名，以免容器重启时因为发现这个文件存在又执行一遍初始化。
+#
+#      在完成 MySQL 节点的初始化后，这个 sidecar 容器的第二个工作，则是启动一个数据传输服务。
+#
+#      具体做法是：sidecar 容器会使用 ncat 命令启动一个工作在 3307 端口上的网络发送服务。一旦收到数据传输请求时，sidecar 容器就会
+#      调用 xtrabackup --backup 指令备份当前 MySQL 的数据，然后把这些备份数据返回给请求者。这就是为什么我们在 InitContainer 里定
+#      义数据拷贝的时候，访问的是“上一个 MySQL 节点”的 3307 端口。
+#
+#      值得一提的是，由于 sidecar 容器和 MySQL 容器同处于一个 Pod 里，所以它是直接通过 Localhost 来访问和备份 MySQL 容器里的数
+#      据的，非常方便。
+
+            - bash  # 极客时间上的配置
+            - "-c"
+            - |
+              set -ex
+              cd /var/lib/mysql
+
+              # 从备份信息文件里读取 MASTER_LOG_FILEM 和 MASTER_LOG_POS 这两个字段的值，用来拼装集群初始化 SQL
+              if [[ -f xtrabackup_slave_info ]]; then
+              # 如果 xtrabackup_slave_info 文件存在，说明这个备份数据来自于另一个 Slave 节点。这种情况下，XtraBackup 工具在备份的时候，就已经在这个文件里自动生成了 "CHANGE MASTER TO" SQL 语句。所以，我们只需要把这个文件重命名为 change_master_to.sql.in，后面直接使用即可
+              mv xtrabackup_slave_info change_master_to.sql.in
+              # 所以，也就用不着 xtrabackup_binlog_info 了
+              rm -f xtrabackup_binlog_info
+              elif [[ -f xtrabackup_binlog_info ]]; then
+              # 如果只存在 xtrabackup_binlog_inf 文件，那说明备份来自于 Master 节点，我们就需要解析这个备份信息文件，读取所需的两个字段的值
+              [[ `cat xtrabackup_binlog_info` =~ ^(.*?)[[:space:]]+(.*?)$ ]] || exit 1
+              rm xtrabackup_binlog_info
+              # 把两个字段的值拼装成 SQL，写入 change_master_to.sql.in 文件
+              echo "CHANGE MASTER TO MASTER_LOG_FILE='${BASH_REMATCH[1]}',\
+              MASTER_LOG_POS=${BASH_REMATCH[2]}" > change_master_to.sql.in
+              fi
+
+              # 如果 change_master_to.sql.in，就意味着需要做集群初始化工作
+              if [[ -f change_master_to.sql.in ]]; then
+              # 但一定要先等 MySQL 容器启动之后才能进行下一步连接 MySQL 的操作
+              # 需要注意的是：Pod 里的容器并没有先后顺序，所以在执行初始化 SQL 之前，必须先执行一句 SQL（select 1）来检查一下 MySQL 服务是否已经可用。
+              echo "Waiting for mysqld to be ready (accepting connections)"
+              until mysql -h 127.0.0.1 -e "SELECT 1"; do sleep 1; done
+
+              echo "Initializing replication from clone position"
+              # 将文件 change_master_to.sql.in 改个名字，防止这个 Container 重启的时候，因为又找到了 change_master_to.sql.in，从而重复执行一遍这个初始化流程
+              mv change_master_to.sql.in change_master_to.sql.orig
+              # 使用 change_master_to.sql.orig 的内容，也是就是前面拼装的 SQL，组成一个完整的初始化和启动 Slave 的 SQL 语句
+              mysql -h 127.0.0.1 <<EOF
+              $(<change_master_to.sql.orig),
+              MASTER_HOST='mysql-0.mysql',
+              MASTER_USER='root',
+              MASTER_PASSWORD='',
+              MASTER_CONNECT_RETRY=10;
+              START SLAVE;
+              EOF
+              fi
+
+              # 使用 ncat 监听 3307 端口。它的作用是，在收到传输请求的时候，直接执行 "xtrabackup --backup" 命令，备份 MySQL 的数据并发送给请求者
+              exec ncat --listen --keep-open --send-only --max-conns=1 3307 -c \
+              "xtrabackup --backup --slave-info --stream=xbstream --host=127.0.0.1 --user=root"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+              subPath: mysql
+            - name: conf
+              mountPath: /etc/mysql/conf.d
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+      volumes:
+        - name: conf
+          emptyDir: {}
+        - name: config-map
+          configMap:
+            name: mysql
+  volumeClaimTemplates: # 作为一个有存储状态的 MySQL 集群，StatefulSet 还需要管理存储状态。通过 volumeClaimTemplate(PVC 模板)来为每个 Pod 定义 PVC。
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"] #ReadWriteOnce 指定了该存储的属性为可读写，并且一个 PV 只允许挂载在一个宿主机上。将 来，这个 PV 对应的的 Volume 就会充当 MySQL Pod 的存储数据目录。
+        resources:
+          requests:
+            storage: 1Gi  #指定了存储的大小为 1GB;
+
+
+#### 您需要有一个带有默认StorageClass的动态持续卷供应程序，或者自己静态的提供持久卷来满足这里使用的持久卷请求。
+
+
+# https://kubernetes.io/zh/docs/tasks/run-application/run-replicated-stateful-application/
+# 因为是通过一个statefulset来实现的 感觉太复杂了，master和slave做成两个statefulset就非常简单了
+
+
+

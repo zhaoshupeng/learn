@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: StatefulSet # StatefulSet 给它所管理的所有 Pod 的名字，进行了编号，而且这些编号都是从 0 开始累加，与 StatefulSet 的每
+    #个 Pod 实例一一对应，绝不重复。更重要的是，这些 Pod 的创建，也是严格按照编号顺序进行的。
+metadata:
+  name: web # 注意与deployment的区别，这是StatefulSet名称
+spec:
+  serviceName: "nginx" # 标记使用那个Service; 这个字段的作用，就是告诉 StatefulSet 控制器，在执行控制循环(Control Loop)的时候， 请使用 nginx 这个 Headless Service 来保证 Pod 的“可解析身份”。
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.20.1
+          ports:
+            - containerPort: 80
+              name: web
+          volumeMounts:
+            - name: www
+              mountPath: /usr/share/nginx/pvc
+  volumeClaimTemplates: #可能需要删除之前的statefulset,重新创建，命令才生效， 额外添加了一个 volumeClaimTemplates 字段;凡是被这 个 StatefulSet 管理的 Pod，都会声明一个对应的 PVC;而这个 PVC 的定义，就来自于 volumeClaimTemplates 这个模板字段。更重要的是，这个 PVC 的名字，会被分配一个与这个 Pod 完全一致的编号。
+    - metadata:
+        name: www
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+
+
+
+
+# StatefulSet 可以说是 Kubernetes 项目中最为复杂的编排对象
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

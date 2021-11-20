@@ -14,8 +14,17 @@ spec: #必选，specification of the resource content 指定该资源的内容�
                 #Always:在任何情况下，只要容器不在运行状态，就自动重启容器;
                 #OnFailure: 只在容器 异常时才自动重启容器; 对于包含多个容器的 Pod，只有它里面所有的容器都进入异常状态后，Pod 才会进入 Failed 状 态。在此之前，Pod 都是 Running 状态。
                 #Never: 从来不重启容器。
-  nodeSelector:     #节点选择，先给主机打标签kubectl label nodes kube-node1 zone=node1
+  nodeSelector:     #节点选择，先给主机打标签kubectl label nodes kube-node1 zone=node1；#节点选择，先给主机打标签kubectl label nodes kube-node1 zone=node1
     zone: node1
+  affinity: # Pod 里跟调度相关的一个字段
+    nodeAffinity: # 节点亲和性，代替nodeSelector
+      requiredDuringSchedulingIgnoredDuringExecution: #意思是说，这个 nodeAffinity 必须在每次调度的时候予以考虑。同时，这也意味着你可以设置在某些情况下不考虑这个 nodeAffinity；
+        nodeSelectorTerms:
+          - matchExpressions: # 这个 Pod，将来只允许运行在“metadata.name”是“node-geektime”的节点上
+              - key: metadata.name
+                operator: In
+                values:
+                  - node-geektime
   hostAliases: # 使用 HostAliases 向 Pod /etc/hosts 文件添加条目;由 Kubelet 管理，并且 可以在 Pod 创建/重启过程中被重写。
     - ip: "127.0.0.1"
       hostnames:
@@ -130,6 +139,20 @@ spec: #必选，specification of the resource content 指定该资源的内容�
         name: string
         items:
           - key: string
+    - name: pv-storage
+      persistentVolumeClaim: # 在pod中声明类型为 persistentVolumeClaim
+        claimName: pv-claim  # 提前创建好的 persistentVolumeClaim 的名称
 
 
-
+## demo for persistentVolumeClaim
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

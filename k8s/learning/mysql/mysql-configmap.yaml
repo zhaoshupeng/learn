@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+data:
+  master.cnf: |
+  # 定义了主节点 MySQL 的配置文件； master.cnf 是 ConfigMap 定义里的 data 部分中的key;“|”后面的内容，就是这份配置数据的 Value。
+  #这份数据将来挂载进Master 节点对应的 Pod 后，就会在 Volume 目录里生成一个叫作 master.cnf 的文件。
+  # master.cnf 开启了 log-bin
+    [mysqld]
+    log-bin
+
+  slave.cnf: |     # 从节点 MySQL 的配置文件
+  #slave.cnf 的开启了 super-read-only，代表的是从节点会拒绝除了主节点的数据同步操作之 外的所有写操作，即:它对用户是只读的。
+    [mysqld]
+    super-read-only

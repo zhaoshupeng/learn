@@ -1,0 +1,93 @@
+
+1、基于角色的权限控制之 RBAC
+      Kubernetes 中所有的 API 对象，都保存在 Etcd 里。可是，对这些 API 对象的操作，却一定都是通过访问 kube-apiserver 实现的。
+    其中一个非常重要的原因，就是你需要 APIServer 来帮助你做授权工作。
+      在 Kubernetes 项目中，负责完成授权（Authorization）工作的机制，就是 RBAC
+      明确三个最基本的概念：
+        Role：角色，它其实是一组规则，定义了一组对 Kubernetes API 对象的操作权限。
+        Subject：被作用者，既可以是“人”，也可以是“机器”，也可以使你在 Kubernetes 里定义的“用户”。
+        RoleBinding：定义了“被作用者”和“角色”的绑定关系
+    (1) 先来讲解一下 Role
+    实际上，Role 本身就是一个 Kubernetes 的 API 对象，定义如下所示：
+      kind: Role
+      apiVersion: rbac.authorization.k8s.io/v1
+      metadata:
+        namespace: mynamespace  #  Role 对象指定了它能产生作用的 Namepace 是：mynamespace
+        name: example-role
+      rules:                      # Role 对象的 rules 字段，就是它所定义的权限规则
+        - apiGroups: [""]
+          resources: ["pods"]
+          verbs: ["get", "watch", "list"]
+    在上面的例子里，这条规则的含义就是：允许“被作用者”，对 mynamespace 下面的 Pod 对象，进行 GET、WATCH 和 LIST 操作。
+
+    1) 那么，这个具体的“被作用者”又是如何指定的呢？这就需要通过 RoleBinding 来实现了。
+    当然，RoleBinding 本身也是一个 Kubernetes 的 API 对象。它的定义如下所示：
+      kind: RoleBinding
+      apiVersion: rbac.authorization.k8s.io/v1
+      metadata:
+        name: example-rolebinding
+        namespace: mynamespace
+      subjects:  #RoleBinding 对象里定义了一个 subjects 字段，即“被作用者”。它的类型是 User，即 Kubernetes 里的用户。这个用户的名字是 example-user。
+        # 你可以指定不止一个“subject（主体）”
+        - kind: User
+          name: example-user # 是区分大小写的
+          apiGroup: rbac.authorization.k8s.io
+      roleRef:
+        # "roleRef" 指定与某 Role 或 ClusterRole 的绑定关系
+        kind: Role # 此字段必须是 Role 或 ClusterRole
+        name: example-role # 此字段必须与你要绑定的 Role 或 ClusterRole 的名称匹配
+        apiGroup: rbac.authorization.k8s.io
+      可是，在 Kubernetes 中，其实并没有一个叫作“User”的 API 对象。而且，我们在前面和部署使用 Kubernetes 的流程里，既不需要 User，
+    也没有创建过 User。
+    2) 这个 User 到底是从哪里来的呢？
+        实际上，Kubernetes 里的“User”，也就是“用户”，只是一个授权系统里的逻辑概念。它需要通过外部认证服务，比如 Keystone，来提供。
+      或者，你也可以直接给 APIServer 指定一个用户名、密码文件.那么 Kubernetes 的授权系统，就能够从这个文件里找到对应的“用户”了。当然，在
+      大多数私有的使用环境中，我们只要使用 Kubernetes 提供的内置“用户”，就足够了。
+
+        需要再次提醒的是，Role 和 RoleBinding 对象都是 Namespaced 对象（Namespaced Object），它们对权限的限制规则仅在它们自己
+      的 Namespace 内有效，roleRef 也只能引用当前 Namespace 里的 Role 对象。
+    3) 对于非 Namespaced（Non-namespaced）对象（比如：Node），或者，某一个 Role 想要作用于所有的 Namespace 的时候，我们又该如何去做授权呢？
+        就必须要使用 ClusterRole 和 ClusterRoleBinding 这两个组合了。这两个 API 对象的用法跟 Role 和 RoleBinding 完全一样。只
+      不过，它们的定义里，没有了 Namespace 字段，如下所示：
+        kind: ClusterRole
+        apiVersion: rbac.authorization.k8s.io/v1
+        metadata:
+          name: example-clusterrole
+        rules: # Role 对象的 rules 字段，就是它所定义的权限规则
+          - apiGroups: [ "" ]
+            resources: [ "pods" ]
+            verbs: [ "get", "watch", "list" ]
+      -----------------------
+
+        kind: ClusterRoleBinding
+        apiVersion: rbac.authorization.k8s.io/v1
+        metadata:
+          name: example-clusterrolebinding
+        subjects:
+          - kind: User
+            name: example-user
+            apiGroup: rbac.authorization.k8s.io
+        roleRef:
+          kind: ClusterRole
+          name: example-clusterrole
+          apiGroup: rbac.authorization.k8s.io
+      上面的例子里的 ClusterRole 和 ClusterRoleBinding 的组合，意味着名叫 example-user 的用户，拥有对所有 Namespace 里的 Pod
+    进行 GET、WATCH 和 LIST 操作的权限。
+      更进一步地，在 Role 或者 ClusterRole 里面，如果要赋予用户 example-user 所有权限，那你就可以给它指定一个 verbs 字段的全集，如下所示：
+      verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+      类似的，Role 对象的 rules 字段也可以进一步细化。比如，你可以只针对某一个具体的对象进行权限设置，如下所示
+      rules:
+        - apiGroups: [ "" ]
+          resources: [ "configmaps" ]
+          resourceNames: [ "my-config" ]
+          verbs: [ "get" ]
+    (2) Kubernetes 负责管理的“内置用户”，正是我们前面曾经提到过的：ServiceAccount
+      接下来，我通过一个具体的实例来为你讲解一下为 ServiceAccount 分配权限的过程。
+
+
+
+
+
+
+
+

@@ -1,0 +1,32 @@
+# 需要创建两个 Service 来供 StatefulSet 以及用户使用。
+# Headless service for stable DNS entries of StatefulSet members.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    app: mysql
+spec:
+  ports:
+    - name: mysql
+      port: 3306 #端口映射都是用 Service 的 3306 端口对应 Pod 的 3306 端口。
+  clusterIP: None   #名叫“mysql”的 Service 是一个 Headless Service(即:clusterIP= None)。所以它的作用，是通过为 Pod
+                    #分配 DNS 记录来固定它的拓扑状态，比如“mysql- 0.mysql”和“mysql-1.mysql”这样的 DNS 名字。其中，编号为 0 的
+                    #节点就是我们的主节 点。
+  selector:
+    app: mysql #Service 都代理了所有携带 app=mysql 标签的 Pod
+---
+# Client service for connecting to any MySQL instance for reads.
+# For writes, you must instead connect to the master: mysql-0.mysql.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-read
+  labels:
+    app: mysql
+spec:
+  ports:
+    - name: mysql
+      port: 3306
+  selector:
+    app: mysql
