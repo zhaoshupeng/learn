@@ -25,6 +25,12 @@ import "fmt"
 	如果链表只包含一个结点时，代码是否能正常工作？
 	如果链表只包含两个结点时，代码是否能正常工作？
 	代码逻辑在处理头结点和尾结点的时候，是否能正常工作？
+7、常见链表操作
+	(1) 单链表反转
+	(2) 链表中环的检测
+    (3) 两个有序的链表合并
+	(4) 删除链表倒数第 n 个结点
+	(5) 求链表的中间结点
 
 */
 
@@ -170,6 +176,7 @@ func (sll *SingleLinkedList) Print() {
 	fmt.Println(format)
 }
 
+// (1) 单链表反转
 func (sll *SingleLinkedList) Reverse() {
 	if sll.head == nil || sll.head.next == nil || sll.head.next.next == nil {
 		return
@@ -189,6 +196,7 @@ func (sll *SingleLinkedList) Reverse() {
 /*
 判断单链表是否有环
 */
+// (2) 链表中环的检测
 func (sll *SingleLinkedList) HasCycle() bool {
 	if sll.head != nil {
 		slow := sll.head
@@ -207,7 +215,7 @@ func (sll *SingleLinkedList) HasCycle() bool {
 }
 
 /*
-两个有序单链表合并
+(3) 两个有序单链表合并
 */
 func MergeSortedList(l1, l2 *SingleLinkedList) *SingleLinkedList {
 	if l1 == nil || l1.head == nil || l1.head.next == nil {
@@ -245,7 +253,7 @@ func MergeSortedList(l1, l2 *SingleLinkedList) *SingleLinkedList {
 }
 
 /*
-删除倒数第N个节点
+(4)删除倒数第N个节点
 */
 func (sll *SingleLinkedList) DeleteBottomN(n int) {
 	if n <= 0 || nil == sll.head || nil == sll.head.next {
@@ -270,7 +278,7 @@ func (sll *SingleLinkedList) DeleteBottomN(n int) {
 }
 
 /*
-获取中间节点
+(5) 获取中间节点
 */
 func (sll *SingleLinkedList) FindMiddleNode() *SingleLinkedListNode {
 	if nil == sll.head || nil == sll.head.next {
