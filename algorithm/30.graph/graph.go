@@ -37,7 +37,7 @@ import (
 	（1）给你一个用户，如何找出这个用户的所有三度（其中包含一度、二度和三度）好友关系？
 */
 
-//adjacency table, 以无向图作为示例
+// adjacency table, 以无向图作为示例
 type Graph struct {
 	adj []*list.List // 邻接表 // list 包实现了一个双链表（doubly linked list）
 	v   int          // 顶点的个数
@@ -54,14 +54,14 @@ func NewGraph(v int) *Graph {
 	return graphh
 }
 
-//insert as add edge，一条边存2次
+// insert as add edge，一条边存2次
 func (graph *Graph) addEdge(s int, t int) { // 无向图一条边存两次
 	graph.adj[s].PushBack(t)
 	graph.adj[t].PushBack(s)
 }
 
 // 广度优先搜索（Breadth-First-Search），我们平常都简称 BFS。直观地讲，它其实就是一种“地毯式”层层推进的搜索策略，
-//即先查找离起始顶点最近的，然后是次近的，依次往外搜索。
+// 即先查找离起始顶点最近的，然后是次近的，依次往外搜索。
 // s 表示起始顶点，t 表示终止顶点；
 // 实际上，这样求得的路径就是从 s 到 t 的最短路径。
 // 时间复杂度：O(V+E)可以简写为 O(E)。，其中，V 表示顶点的个数，E 表示边的个数； （当然，对于一个连通图来说，也就是说一个图中的所有顶点都是连通的，E 肯定要大于等于 V-1）
@@ -94,6 +94,9 @@ func (graph *Graph) BFS(s int, t int) {
 	var queue []int
 	queue = append(queue, s)
 
+	// friends[a] = 1 s 到顶点 a 的距离为 1
+	friends := map[int]int{s: 0}
+
 	isFound := false
 
 	// 都访问完成或者发现目标顶点则停止循环
@@ -115,8 +118,9 @@ func (graph *Graph) BFS(s int, t int) {
 				}
 
 				queue = append(queue, k)
-
 				visited[k] = true // 标记 k 顶点被访问
+
+				friends[k] = friends[top] + 1
 			}
 		}
 	}
@@ -128,7 +132,7 @@ func (graph *Graph) BFS(s int, t int) {
 	}
 }
 
-//print path recursively
+// print path recursively
 func printPrev(prev []int, s int, t int) { // 递归打印s->t的路径
 	// 递归截止条件
 	if t != s && prev[t] != -1 {
@@ -142,7 +146,7 @@ func printPrev(prev []int, s int, t int) { // 递归打印s->t的路径
 // 实际上，深度优先搜索用的是一种比较著名的算法思想，回溯思想。
 // 深度优先搜索代码实现也用到了 prev、visited 变量以及 print() 函数，它们跟广度优先搜索代码实现里的作用是一样的
 // 不过，深度优先搜索代码实现里，有个比较特殊的变量 found，它的作用是，当我们已经找到终止顶点 t 之后，我们就不再递归地继续查找了。
-//search by DFS
+// search by DFS
 // 时间复杂度：深度优先搜索算法的时间复杂度是 O(E)，E 表示边的个数。
 // 空间复杂度就是 O(V)。
 func (graph *Graph) DFS(s int, t int) {
@@ -161,7 +165,7 @@ func (graph *Graph) DFS(s int, t int) {
 	printPrev(prev, s, t)
 }
 
-//recursivly find path
+// recursivly find path
 func (graph *Graph) recurse(s int, t int, prev []int, visited []bool, isFound bool) {
 	if isFound {
 		return
