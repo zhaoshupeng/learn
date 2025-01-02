@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"runtime"
-	"unsafe"
+	"time"
 )
 
 // 崩溃时需要传递的上下文信息
@@ -27,33 +27,36 @@ func ProtectRun(entry func()) {
 	}()
 	entry()
 }
-func main() {
+func main1() {
 
-	var root *BinaryTreeNode
-	//root = &BinaryTreeNode{
-	//	Data: 11,
+	score := float64(time.Now().Unix())
+	fmt.Println("---------------: ", score)
+
+	//var root *BinaryTreeNode
+	////root = &BinaryTreeNode{
+	////	Data: 11,
+	////}
+	//var t *BinaryTreeNode
+	//t = &BinaryTreeNode{
+	//	Data: 33,
 	//}
-	var t *BinaryTreeNode
-	t = &BinaryTreeNode{
-		Data: 33,
-	}
-	fmt.Printf("t地址：%p，t指针的值：%p, t的值的默认格式：%v t的值的默认格式：%+v \n", &t, t, t, t)
-	fmt.Println(unsafe.Pointer(t))
-
-	create(root)
-	fmt.Println("-----------------------")
-	fmt.Printf("root地址：%p，值：%+v\n", root, root)
-
-	//f, _ := os.OpenFile("a.txt", os.O_RDWR|os.O_APPEND, 0777) //读写模式打开，写入追加
-	//defer f.Close()
-	//add_data := "this is add"
-	//num, _ := f.Write([]byte(add_data))
-	//fmt.Println(num)
-	//if test() == nil {
+	//fmt.Printf("t地址：%p，t指针的值：%p, t的值的默认格式：%v t的值的默认格式：%+v \n", &t, t, t, t)
+	//fmt.Println(unsafe.Pointer(t))
 	//
-	//}
-	//fmt.Println("ssss", test() == nil)
-	//fmt.Println("ssss", test(), test1())
+	//create(root)
+	//fmt.Println("-----------------------")
+	//fmt.Printf("root地址：%p，值：%+v\n", root, root)
+	//
+	////f, _ := os.OpenFile("a.txt", os.O_RDWR|os.O_APPEND, 0777) //读写模式打开，写入追加
+	////defer f.Close()
+	////add_data := "this is add"
+	////num, _ := f.Write([]byte(add_data))
+	////fmt.Println(num)
+	////if test() == nil {
+	////
+	////}
+	////fmt.Println("ssss", test() == nil)
+	////fmt.Println("ssss", test(), test1())
 }
 
 func test() []interface{} {

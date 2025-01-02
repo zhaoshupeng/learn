@@ -34,7 +34,7 @@ import "fmt"
 如果新加入的数据小于等于大顶堆的堆顶元素，我们就将这个新数据插入到大顶堆；否则，我们就将这个新数据插入到小顶堆。（然后调整两个堆中的数量，让大顶堆的堆顶元素是中位数）
 */
 
-func main() {
+func main1() {
 	arr := []int{0, 7, 5, 20, 4, 1, 19, 13, 8}
 	Sort(arr, len(arr)-1)
 	fmt.Println("after sort", arr)
@@ -47,8 +47,8 @@ type Heap struct {
 	count int   // 堆中已经存储的数据个数
 }
 
-//init heap
-//初始化堆/建堆，capacity
+// init heap
+// 初始化堆/建堆，capacity
 func NewHeap(capacity int) *Heap {
 	heap := Heap{}
 	heap.arr = make([]int, capacity+1) // 因为从下标1 开始存储数据
@@ -61,7 +61,7 @@ func NewHeap(capacity int) *Heap {
 一个包含n个节点的完全二叉树，其树高不超过log2N，堆化的时间复杂度跟树高成正比，也就是O(logN),插入和删除堆顶元素的主要逻辑就是堆化
 */
 
-//top-max heap -> heapify from down to up
+// top-max heap -> heapify from down to up
 // 新增一个数据
 func (heap *Heap) Insert(data int) {
 	//defensive
@@ -97,14 +97,14 @@ func (heap *Heap) RemoveMax() {
 	heapifyUpToDown(heap.arr, heap.count)
 }
 
-//swap two elements
+// swap two elements
 func swap(a []int, i int, j int) {
 	tmp := a[i]
 	a[i] = a[j]
 	a[j] = tmp
 }
 
-//heapify
+// heapify
 func heapifyUpToDown(arr []int, count int) { // 自上往下堆化
 	for i := 1; i <= count/2; {
 		maxIndex := i
@@ -124,9 +124,9 @@ func heapifyUpToDown(arr []int, count int) { // 自上往下堆化
 	}
 }
 
-//堆排序是一种原地的、时间复杂度为 O(nlogn) 的排序算法。
+// 堆排序是一种原地的、时间复杂度为 O(nlogn) 的排序算法。
 // 建堆结束之后，数组中的数据已经是按照大顶堆的特性来组织的。数组中的第一个元素就是堆顶，
-//也就是最大的元素。我们把它跟最后一个元素交换，那最大元素就放到了下标为 n 的位置。(类似于删除堆顶元素，)
+// 也就是最大的元素。我们把它跟最后一个元素交换，那最大元素就放到了下标为 n 的位置。(类似于删除堆顶元素，)
 // n 表示数据的个数，数组 a 中的数据从下标 1 到 n 的位置。
 func Sort(arr []int, n int) {
 	BuildHeap(arr, n)
@@ -142,7 +142,7 @@ func Sort(arr []int, n int) {
 
 }
 
-//---第二种方式建堆
+// ---第二种方式建堆
 // 建堆时间复杂度是O(N): 堆化的节点从倒数第二层开始。每个节点堆化的过程中，需要比较和交换的节点个数，跟这个节点的高度 K 成正比。我们只需要将每个节点的高度求和，得出的就是建堆的时间复杂度。
 func BuildHeap(arr []int, n int) {
 	// n / 2 为最后一个叶子节点的父节点
